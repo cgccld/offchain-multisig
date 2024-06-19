@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.25 <0.9.0;
 
-import { Test } from "forge-std/Test.sol";
-import { console2 } from "forge-std/console2.sol";
-
 import { SigUtils } from "./utils/SigUtils.sol";
 import { MockERC20 } from "./mocks/MockERC20.sol";
+import { Test, console2 } from "forge-std/Test.sol";
 import { OffchainMultisig, IOffchainMultisig } from "../src/OffchainMultisig.sol";
 
 contract OffchainMultisigTest is Test {
