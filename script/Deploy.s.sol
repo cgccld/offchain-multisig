@@ -10,8 +10,9 @@ contract Deploy is BaseMigrate {
   }
 
   function deploy() public broadcast {
-    address[] memory addresses = new address[](1);
-    addresses[0] = 0xB18922995ddE6C185430EfC9DCb79ba86D888Dba;
-    deployContract("OffchainMultisig.sol:OffchainMultisig", abi.encode(addresses,1));
+    address[] memory addresses = new address[](2);
+    addresses[0] = 0x3039f3D6B9997b9878f746feB1C23B00B588569A;
+    addresses[1] = 0x7b9e9b3d1AD8Fd0bb2b999877e12dC02B327942B;
+    deployContract("OffchainMultisig.sol:OffchainMultisig", abi.encode(addresses, 2));
   }
 }

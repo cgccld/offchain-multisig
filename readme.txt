@@ -20,7 +20,7 @@ $ forge test
 DEPLOYMENT
 
 $ source .env
-$ forge script script/Deploy.s.sol -f tbsc --etherscan-api-key $BSCSCAN_KEY --private-key $DEPLOYER_KEY --gas-price $(cast gas-price --rpc-url $RPC_URL_TBSC) --broadcast --verify -vv
+$ forge script script/Deploy.s.sol -f tbsc --etherscan-api-key $BSCSCAN_KEY --private-key $DEPLOYER_KEY --with-gas-price 5000000000 --broadcast --verify -vv
 
 VERIFY
 
