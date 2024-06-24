@@ -38,8 +38,9 @@ contract OffchainMultisigTest is Test {
     mockToken.mint(address(multisig), 1e18);
   }
 
-  function _signTransferERC20(uint256 ownerPrivateKey_) internal view returns (bytes memory) {
+  function _signTransferERC20(uint256 txsId, uint256 ownerPrivateKey_) internal view returns (bytes memory) {
     SigUtils.Transaction memory transaction = SigUtils.Transaction({
+      txsId: txsId,
       destination: address(mockToken),
       value: 0,
       data: abi.encodeWithSignature("transfer(address,uint256)", recipient, 1e18)
@@ -54,8 +55,9 @@ contract OffchainMultisigTest is Test {
     return abi.encodePacked(r, s, v);
   }
 
-  function _signTransferNatives(uint256 ownerPrivateKey_) internal view returns (bytes memory) {
-    SigUtils.Transaction memory transaction = SigUtils.Transaction({destination: recipient, value: 1e18, data: ""});
+  function _signTransferNatives(uint256 txsId, uint256 ownerPrivateKey_) internal view returns (bytes memory) {
+    SigUtils.Transaction memory transaction =
+      SigUtils.Transaction({txsId: txsId, destination: recipient, value: 1e18, data: ""});
 
     bytes32 digest = sigUtils.getTypedDataHash(transaction);
 
@@ -68,8 +70,8 @@ contract OffchainMultisigTest is Test {
 
   function testConcrete_executeTransaction_transferERC20() public {
     bytes[] memory signatures = new bytes[](2);
-    signatures[0] = _signTransferERC20(owner1PrivateKey);
-    signatures[1] = _signTransferERC20(owner2PrivateKey);
+    signatures[0] = _signTransferERC20(1, owner1PrivateKey);
+    signatures[1] = _signTransferERC20(1, owner2PrivateKey);
 
     IOffchainMultisig.Transaction memory txn = IOffchainMultisig.Transaction({
       destination: address(mockToken),
@@ -86,8 +88,8 @@ contract OffchainMultisigTest is Test {
 
   function testConcrete_executeTransaction_transferNative() public {
     bytes[] memory signatures = new bytes[](2);
-    signatures[0] = _signTransferNatives(owner1PrivateKey);
-    signatures[1] = _signTransferNatives(owner2PrivateKey);
+    signatures[0] = _signTransferNatives(2, owner1PrivateKey);
+    signatures[1] = _signTransferNatives(2, owner2PrivateKey);
 
     IOffchainMultisig.Transaction memory txn =
       IOffchainMultisig.Transaction({destination: recipient, value: 1e18, data: ""});

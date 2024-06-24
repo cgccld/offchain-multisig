@@ -8,9 +8,11 @@ contract SigUtils {
     DOMAIN_SEPARATOR = _DOMAIN_SEPARATOR;
   }
 
-  bytes32 private constant TRANSACTION_TYPEHASH = keccak256("Transaction(address destination,uint256 value,bytes data)");
+  bytes32 private constant TRANSACTION_TYPEHASH =
+    keccak256("Transaction(uint256 txsId,address destination,uint256 value,bytes data)");
 
   struct Transaction {
+    uint256 txsId;
     address destination;
     uint256 value;
     bytes data;

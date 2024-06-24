@@ -9,7 +9,8 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   uint256 public constant LIMIT_CRITERIA = 50;
-  bytes32 private constant TYPEHASH = 0xb392c21c9ad37d94787e9c7fe4029c1962f3bd164d12a28ace8500a958bbbcf6;
+  bytes32 private constant TYPEHASH =
+    keccak256("Transaction(uint256 txsId,address destination,uint256 value,bytes data)");
 
   using ErrorHandler for *;
   using EnumerableSet for *;
@@ -18,17 +19,17 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   EnumerableSet.AddressSet internal owners;
 
   /*
-   * Modifiers
-   */
+     * Modifiers
+     */
   modifier onlySelf() {
-    if (msg.sender != address(this)){
+    if (msg.sender != address(this)) {
       revert OnlySelf();
     }
     _;
   }
 
   modifier notNull(address addr) {
-    if (addr == address(0)) { 
+    if (addr == address(0)) {
       revert InvalidAddress();
     }
     _;
@@ -61,8 +62,8 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   }
 
   /*
-   * Read methods
-   */
+     * Read methods
+     */
   function getOwners() public view returns (address[] memory) {
     return owners.values();
   }
@@ -73,7 +74,7 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
     notNull(owner)
     validRequirement(owners.values().length + 1, criteria)
   {
-    if (!owners.add(owner)) { 
+    if (!owners.add(owner)) {
       revert OwnerAlreadyExisted(owner);
     }
     emit OwnerAddition(owner);
@@ -106,7 +107,7 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
 
   function executeTransaction(uint256 txsId, Transaction calldata txs, bytes[] memory signatures) external {
     _setUsed(txsId);
-    _verify(txs, signatures);
+    _verify(txsId, txs, signatures);
     _execute(txsId, txs);
   }
 
@@ -127,19 +128,19 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
     return isConfirmed;
   }
 
-  function _verify(Transaction calldata txs, bytes[] memory signatures) internal view {
+  function _verify(uint256 txsId, Transaction calldata txs, bytes[] memory signatures) internal view {
     uint256 len = signatures.length;
 
     address[] memory confirmed = new address[](len);
 
-    bytes32 structHash = keccak256(abi.encode(TYPEHASH, txs.destination, txs.value, txs.data));
+    bytes32 structHash = keccak256(abi.encode(TYPEHASH, txsId, txs.destination, txs.value, txs.data));
 
     for (uint256 i; i < len;) {
       address signer = _recoverSigner(structHash, signatures[i]);
       if (owners.contains(signer)) {
         if (_alreadyConfirmed(confirmed, signer)) {
           revert OwnerAlreadyConfirmed(signer);
-        } 
+        }
         confirmed[i] = signer;
       }
       unchecked {
