@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import {Signable} from "../src/internal/Signable.sol";
 import {ErrorHandler} from "./libraries/ErrorHandler.sol";
@@ -14,26 +14,30 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   using ErrorHandler for *;
   using EnumerableSet for *;
 
-  uint256 public threshold;
+  uint256 public criteria;
   EnumerableSet.AddressSet internal owners;
 
   /*
    * Modifiers
    */
-  modifier selfOnly() {
-
-    require(msg.sender == address(this), "SCO");
+  modifier onlySelf() {
+    if (msg.sender != address(this)){
+      revert OnlySelf();
+    }
     _;
   }
 
   modifier notNull(address addr) {
-
-    require(addr != address(0), "NUL");
+    if (addr == address(0)) { 
+      revert InvalidAddress();
+    }
     _;
   }
 
-  modifier validRequirement(uint256 ownerSize, uint256 criteria) {
-    require(ownerSize <= LIMIT_CRITERIA && criteria <= ownerSize && criteria != 0 && ownerSize != 0, "NVR");
+  modifier validRequirement(uint256 ownerSize, uint256 crit) {
+    if (ownerSize > LIMIT_CRITERIA || crit > ownerSize || crit == 0 || ownerSize == 0) {
+      revert InvalidRequirement();
+    }
     _;
   }
 
@@ -43,11 +47,11 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
     }
   }
 
-  constructor(address[] memory initOwners, uint256 criteria)
+  constructor(address[] memory initOwners, uint256 crit)
     Signable("OffchainMultisig", "1")
-    validRequirement(initOwners.length, criteria)
+    validRequirement(initOwners.length, crit)
   {
-    threshold = criteria;
+    criteria = crit;
     for (uint256 i; i < initOwners.length;) {
       owners.add(initOwners[i]);
       unchecked {
@@ -65,32 +69,39 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
 
   function addOwner(address owner)
     public
-    selfOnly
+    onlySelf
     notNull(owner)
-    validRequirement(owners.values().length + 1, threshold)
+    validRequirement(owners.values().length + 1, criteria)
   {
-    require(owners.add(owner), "OAE");
+    if (!owners.add(owner)) { 
+      revert OwnerAlreadyExisted(owner);
+    }
     emit OwnerAddition(owner);
   }
 
-  function removeOwner(address owner) public selfOnly {
-    require(owners.remove(owner), "ONE");
+  function removeOwner(address owner) public onlySelf {
+    if (!owners.remove(owner)) {
+      revert OwnerDoesNotExist(owner);
+    }
     uint256 length = owners.values().length;
-    if (threshold > length) {
+    if (criteria > length) {
       changeRequirement(length);
     }
     emit OwnerRemoval(owner);
   }
 
-  function replaceOwner(address owner, address newOwner) public selfOnly {
-    require(owners.remove(owner) && owners.add(newOwner), "WPA");
+  function replaceOwner(address owner, address newOwner) public onlySelf {
+    if (!(owners.remove(owner) && owners.add(newOwner))) {
+      revert WrongPositionAddress();
+    }
+
     emit OwnerRemoval(owner);
     emit OwnerAddition(newOwner);
   }
 
-  function changeRequirement(uint256 criteria) public selfOnly validRequirement(owners.values().length, criteria) {
-    threshold = criteria;
-    emit RequirementChange(criteria);
+  function changeRequirement(uint256 crit) public onlySelf validRequirement(owners.values().length, crit) {
+    criteria = crit;
+    emit RequirementChange(crit);
   }
 
   function executeTransaction(uint256 txsId, Transaction calldata txs, bytes[] memory signatures) external {
@@ -99,7 +110,7 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
     _execute(txsId, txs);
   }
 
-  function alreadyConfirmed(address[] memory confirmed, address owner) internal pure returns (bool isConfirmed) {
+  function _alreadyConfirmed(address[] memory confirmed, address owner) internal pure returns (bool isConfirmed) {
     for (uint256 i; i < confirmed.length;) {
       if (confirmed[i] == owner) {
         isConfirmed = true;
@@ -118,6 +129,7 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
 
   function _verify(Transaction calldata txs, bytes[] memory signatures) internal view {
     uint256 len = signatures.length;
+
     address[] memory confirmed = new address[](len);
 
     bytes32 structHash = keccak256(abi.encode(TYPEHASH, txs.destination, txs.value, txs.data));
@@ -125,7 +137,9 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
     for (uint256 i; i < len;) {
       address signer = _recoverSigner(structHash, signatures[i]);
       if (owners.contains(signer)) {
-        require(!alreadyConfirmed(confirmed, signer), "Owner already confirmed");
+        if (_alreadyConfirmed(confirmed, signer)) {
+          revert OwnerAlreadyConfirmed(signer);
+        } 
         confirmed[i] = signer;
       }
       unchecked {
@@ -133,7 +147,9 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
       }
     }
 
-    require(confirmed.length >= threshold, "Threshold not reached");
+    if (len < criteria) {
+      revert NotMetCriteria(criteria, len);
+    }
   }
 
   function _execute(uint256 txsId, Transaction calldata txs) internal {

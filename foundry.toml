@@ -4,7 +4,7 @@ out = "out"
 test = "test"
 libs = ["lib"]
 
-solc = "0.8.25"
+solc = "0.8.26"
 evm_version = "paris"
 use_literal_content = true
 
