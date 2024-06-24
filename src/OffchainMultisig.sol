@@ -18,20 +18,16 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   EnumerableSet.AddressSet internal owners;
 
   /*
-    * Modifiers
-    */
+   * Modifiers
+   */
   modifier selfOnly() {
-    /*
-         * SCO: self call only
-         */
+
     require(msg.sender == address(this), "SCO");
     _;
   }
 
   modifier notNull(address addr) {
-    /*
-         * NUL: null address
-         */
+
     require(addr != address(0), "NUL");
     _;
   }
@@ -61,15 +57,12 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   }
 
   /*
-        * Read methods
-        */
+   * Read methods
+   */
   function getOwners() public view returns (address[] memory) {
     return owners.values();
   }
 
-  /*
-        * Keeper only
-        */
   function addOwner(address owner)
     public
     selfOnly
