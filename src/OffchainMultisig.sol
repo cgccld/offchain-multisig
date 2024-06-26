@@ -131,6 +131,10 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
   function _verify(uint256 txsId, Transaction calldata txs, bytes[] memory signatures) internal view {
     uint256 len = signatures.length;
 
+    if (len < criteria) {
+      revert NotMetCriteria(criteria, len);
+    }
+
     address[] memory confirmed = new address[](len);
 
     bytes32 structHash = keccak256(abi.encode(TYPEHASH, txsId, txs.destination, txs.value, txs.data));
@@ -146,10 +150,6 @@ contract OffchainMultisig is IOffchainMultisig, Signable, UniqueChecker {
       unchecked {
         ++i;
       }
-    }
-
-    if (len < criteria) {
-      revert NotMetCriteria(criteria, len);
     }
   }
 
